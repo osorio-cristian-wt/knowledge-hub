@@ -44,10 +44,44 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     throw "winget no esta disponible. Actualizar 'Instalador de aplicacion' desde Microsoft Store y reintentar."
 }
 
+function Test-PythonReal {
+    # Windows agrega un acceso directo en WindowsApps (python.exe / python3.exe)
+    # que aparece en Get-Command pero solo redirige a la Microsoft Store.
+    # Si no se detecta esto, el script cree que Python esta instalado y
+    # despues falla en silencio al crear el venv (paso 3/6).
+    param([string]$Command)
+    if (-not (Get-Command $Command -ErrorAction SilentlyContinue)) { return $false }
+    try {
+        $out = & $Command --version 2>&1
+    } catch {
+        return $false
+    }
+    return [string]$out -match '^Python \d'
+}
+
 Write-Paso "1/6 Herramientas base"
-Ensure-Tool -Command git    -WingetId Git.Git            -Display "Git"
-Ensure-Tool -Command python -WingetId Python.Python.3.12 -Display "Python 3.12"
-Ensure-Tool -Command node   -WingetId OpenJS.NodeJS.LTS  -Display "Node.js LTS"
+Ensure-Tool -Command git  -WingetId Git.Git           -Display "Git"
+Ensure-Tool -Command node -WingetId OpenJS.NodeJS.LTS -Display "Node.js LTS"
+
+if (Test-PythonReal python) {
+    Write-Host "Python 3.12 ya instalado."
+} else {
+    Write-Host "Instalando Python 3.12..."
+    winget install --id Python.Python.3.12 -e --silent --accept-source-agreements --accept-package-agreements
+    Refresh-Path
+    if (-not (Test-PythonReal python)) {
+        throw @"
+Python quedo instalado pero 'python' en PATH sigue apuntando al acceso
+directo de la Microsoft Store (comun en Windows 10). Para arreglarlo:
+
+  1) Abrir Configuracion > Aplicaciones > Aplicaciones y caracteristicas
+  2) Bajar hasta el link "Alias de ejecucion de aplicaciones" y entrar
+  3) Apagar las llaves de "python.exe" y "python3.exe"
+  4) Cerrar esta ventana de PowerShell, abrir una nueva y volver a
+     correr este script.
+"@
+    }
+}
 
 Write-Paso "2/6 Repo del ecosistema (canal de updates, RF-03)"
 $eco = Join-Path $ClawhubHome "ecosystem"
@@ -62,9 +96,20 @@ Write-Paso "3/6 Entorno Python del pipeline"
 $venvPython = Join-Path $eco ".venv\Scripts\python.exe"
 if (-not (Test-Path $venvPython)) {
     python -m venv (Join-Path $eco ".venv")
+    if (-not (Test-Path $venvPython)) {
+        throw "No se pudo crear el entorno virtual en '$venvPython'. Revisar el paso 1/6 (Python)."
+    }
 }
 & $venvPython -m pip install --quiet --upgrade pip
-& $venvPython -m pip install --quiet -r (Join-Path $eco "pipeline\requirements.txt")
+if ($LASTEXITCODE -ne 0) {
+    throw "No se pudo actualizar pip dentro del entorno virtual. Revisar la conexion a internet / proxy."
+}
+# Sin --quiet a proposito: si pip no puede resolver dependencias, esto
+# muestra el detalle real del conflicto en vez de solo el resumen generico.
+& $venvPython -m pip install -r (Join-Path $eco "pipeline\requirements.txt")
+if ($LASTEXITCODE -ne 0) {
+    throw "Fallo la instalacion de dependencias del pipeline. Revisar el detalle de pip mas arriba."
+}
 
 Write-Paso "4/6 OpenClaw"
 npm install -g openclaw@latest
