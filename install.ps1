@@ -1,11 +1,14 @@
 #Requires -Version 5.1
 <#
- Knowledge Hub — bootstrap de la PC de Daiana (RF-01, D-12).
- Un único comando; después de esto todo lo guía Claw conversando (skill onboarding):
+ Knowledge Hub - bootstrap de la PC de Daiana (RF-01, D-12).
+ Un unico comando; despues de esto todo lo guia Claw conversando (skill onboarding):
 
    irm https://raw.githubusercontent.com/osorio-cristian-wt/knowledge-hub/main/install.ps1 | iex
 
  Idempotente: se puede volver a correr sin romper nada.
+ NOTA: este archivo se mantiene en ASCII puro a proposito. PowerShell 5.1 lee
+ los .ps1 sin BOM como ANSI y los caracteres tipograficos (comillas, guiones
+ largos) rompen el parseo de strings.
 #>
 param(
     [string]$ClawhubHome = "C:\clawhub",
@@ -35,7 +38,7 @@ function Ensure-Tool {
     }
 }
 
-Write-Paso "Knowledge Hub / OpenClaw — bootstrap"
+Write-Paso "Knowledge Hub / OpenClaw - bootstrap"
 
 if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     throw "winget no esta disponible. Actualizar 'Instalador de aplicacion' desde Microsoft Store y reintentar."
@@ -85,6 +88,6 @@ openclaw onboard
 Write-Host @"
 
 Listo. Siguiente paso: cuando OpenClaw este conectado al chat,
-escribile al bot: "arranca el onboarding" — Claw guia todo lo demas
+escribile al bot: 'arranca el onboarding' - Claw guia todo lo demas
 (Drive, seleccion curada, primer sync). Ver skills/onboarding/SKILL.md.
 "@ -ForegroundColor Green
