@@ -44,20 +44,21 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     throw "winget no esta disponible. Actualizar 'Instalador de aplicacion' desde Microsoft Store y reintentar."
 }
 
-function Get-RealPythonVersion {
-    # Windows agrega un acceso directo en WindowsApps (python.exe / python3.exe)
-    # que aparece en Get-Command pero solo redirige a la Microsoft Store.
-    # Si no se detecta esto, el script cree que Python esta instalado y
-    # despues falla en silencio al crear el venv (paso 3/6).
-    # Devuelve el string "Python X.Y.Z" real, o $null si no hay uno usable.
-    param([string]$Command)
-    if (-not (Get-Command $Command -ErrorAction SilentlyContinue)) { return $null }
+function Get-Py312Version {
+    # No usamos 'python' del PATH: si hay otra instalacion de Python previa
+    # (otra version, ej. 3.14, o el acceso directo de la Microsoft Store)
+    # adelante en el PATH, 'python' puede terminar apuntando a esa y no a la
+    # 3.12 que este script instala, rompiendo la instalacion de dependencias
+    # en el paso 3/6 con errores de "no hay distribucion para tu entorno".
+    # 'py' (Python Launcher for Windows) elige la version exacta por su
+    # propio registro de instalaciones, sin depender del orden del PATH.
+    if (-not (Get-Command py -ErrorAction SilentlyContinue)) { return $null }
     try {
-        $out = [string](& $Command --version 2>&1)
+        $out = [string](& py -3.12 --version 2>&1)
     } catch {
         return $null
     }
-    if ($out -match '^Python \d') { return $out.Trim() }
+    if ($out -match '^Python 3\.12\.') { return $out.Trim() }
     return $null
 }
 
@@ -65,29 +66,26 @@ Write-Paso "1/6 Herramientas base"
 Ensure-Tool -Command git  -WingetId Git.Git           -Display "Git"
 Ensure-Tool -Command node -WingetId OpenJS.NodeJS.LTS -Display "Node.js LTS"
 
-$pyVersion = Get-RealPythonVersion python
+$pyVersion = Get-Py312Version
 if (-not $pyVersion) {
     Write-Host "Instalando Python 3.12..."
     winget install --id Python.Python.3.12 -e --silent --accept-source-agreements --accept-package-agreements
     Refresh-Path
-    $pyVersion = Get-RealPythonVersion python
+    $pyVersion = Get-Py312Version
     if (-not $pyVersion) {
         throw @"
-Python quedo instalado pero 'python' en PATH sigue apuntando al acceso
-directo de la Microsoft Store (comun en Windows 10). Para arreglarlo:
+No se encontro Python 3.12 a traves del Python Launcher (py -3.12) despues
+de instalarlo. Para arreglarlo:
 
-  1) Abrir Configuracion > Aplicaciones > Aplicaciones y caracteristicas
-  2) Bajar hasta el link "Alias de ejecucion de aplicaciones" y entrar
-  3) Apagar las llaves de "python.exe" y "python3.exe"
-  4) Cerrar esta ventana de PowerShell, abrir una nueva y volver a
-     correr este script.
+  1) Cerrar esta ventana de PowerShell, abrir una nueva (el PATH puede
+     no haberse actualizado) y volver a correr este script.
+  2) Si sigue fallando, reinstalar Python 3.12 desde
+     https://www.python.org/downloads/ dejando tildada la opcion
+     "py launcher" / "Install launcher for all users" durante la instalacion.
 "@
     }
 }
-Write-Host "$pyVersion detectado en PATH."
-if ($pyVersion -notmatch '^Python 3\.12\.') {
-    Write-Host "AVISO: el pipeline se probo con Python 3.12.x y en PATH hay $pyVersion. Si otro Python (de una instalacion previa) esta antes en el PATH, puede causar errores raros de dependencias en el paso 3/6." -ForegroundColor Yellow
-}
+Write-Host "$pyVersion listo (via py -3.12)."
 
 Write-Paso "2/6 Repo del ecosistema (canal de updates, RF-03)"
 $eco = Join-Path $ClawhubHome "ecosystem"
@@ -101,7 +99,7 @@ if (Test-Path (Join-Path $eco ".git")) {
 Write-Paso "3/6 Entorno Python del pipeline"
 $venvPython = Join-Path $eco ".venv\Scripts\python.exe"
 if (-not (Test-Path $venvPython)) {
-    python -m venv (Join-Path $eco ".venv")
+    py -3.12 -m venv (Join-Path $eco ".venv")
     if (-not (Test-Path $venvPython)) {
         throw "No se pudo crear el entorno virtual en '$venvPython'. Revisar el paso 1/6 (Python)."
     }
