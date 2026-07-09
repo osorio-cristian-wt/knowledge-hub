@@ -97,9 +97,23 @@ if (Test-Path (Join-Path $eco ".git")) {
 }
 
 Write-Paso "3/6 Entorno Python del pipeline"
-$venvPython = Join-Path $eco ".venv\Scripts\python.exe"
-if (-not (Test-Path $venvPython)) {
-    py -3.12 -m venv (Join-Path $eco ".venv")
+$venvDir = Join-Path $eco ".venv"
+$venvPython = Join-Path $venvDir "Scripts\python.exe"
+$venvOk = $false
+if (Test-Path $venvPython) {
+    $venvVer = [string](& $venvPython --version 2>&1)
+    if ($venvVer -match '^Python 3\.12\.') { $venvOk = $true }
+}
+if (-not $venvOk) {
+    if (Test-Path $venvDir) {
+        # Venv de una corrida anterior armado con otra version de Python
+        # (ej. 3.14 si en ese momento 'python' del PATH no era la 3.12).
+        # Hay que tirarlo y rehacerlo; si no, pip sigue resolviendo
+        # dependencias para la version vieja.
+        Write-Host "El venv existente no es Python 3.12, se recrea..."
+        Remove-Item -Recurse -Force $venvDir
+    }
+    py -3.12 -m venv $venvDir
     if (-not (Test-Path $venvPython)) {
         throw "No se pudo crear el entorno virtual en '$venvPython'. Revisar el paso 1/6 (Python)."
     }
