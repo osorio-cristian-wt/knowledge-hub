@@ -29,6 +29,7 @@ flowchart LR
         OC[OpenClaw<br/>gateway + agente]
     end
     TG[Telegram<br/>Daiana]
+    WEB[WebChat local<br/>127.0.0.1:18789]
     LLM[API Anthropic<br/>cuenta de Daiana]
     GH[GitHub<br/>repo público]
 
@@ -37,6 +38,7 @@ flowchart LR
     OC -- ejecuta cron/skills --> PL
     OC -- lee/escribe --> KH
     OC <--> TG
+    OC <--> WEB
     OC <--> LLM
     GH -- "git pull (updates)" --> ECO
 ```
@@ -47,7 +49,7 @@ Piezas:
 |---|---|---|
 | **Repo ecosistema** (este, público) | Instalador, pipeline, skills, plantillas, config de OpenClaw. Canal de updates vía `git pull`. | RF-01/02/03, C-02 |
 | **Repo conocimiento** (privado, git local) | Espejo `.md`/CSV + índices + entregables. Sin remoto. | RNF-01, C-02 |
-| **OpenClaw** | Agente conversacional (canal Telegram), ejecutor de cron jobs y skills, clasificador de cambios, generador de resúmenes e índices. | RF-13/25…33/40…42 |
+| **OpenClaw** | Agente conversacional (canales Telegram + WebChat local), ejecutor de cron jobs y skills, clasificador de cambios, generador de resúmenes e índices. | RF-13/25…33/40…42 |
 | **Pipeline de sync** (Python) | Parte determinista: OAuth, `changes.list`, export, conversión, commits. Invocado por skill. | RF-10…15 |
 
 Principio de separación: **lo determinista va en scripts** (descargar, convertir,
@@ -402,7 +404,7 @@ semanalmente en modo "avisar si hay novedades" y Daiana confirma aplicar.
 | DD-07 | Resúmenes | Claw los genera/actualiza en el turno del sync | Solo títulos; a pedido |
 | DD-08 | Frontmatter | Trazabilidad + clasificación + importancia + relaciones | — |
 | DD-09 | Clasificación de cambios | Metadata primero, juicio del agente para lo no obvio | Solo reglas; solo juicio |
-| DD-10 | Canal | Telegram (bot oficial) | WhatsApp (sesión frágil, riesgo de bloqueo) — posible 2º canal futuro |
+| DD-10 | Canal | Telegram (bot oficial, principal — único con push de avisos) + **WebChat** (Control UI local del Gateway en `127.0.0.1:18789`, secundario para uso en la PC; auth por contraseña, loopback) | WhatsApp (sesión frágil, riesgo de bloqueo) — posible canal futuro |
 | DD-11 | Granularidad | 1:1 archivo Drive ↔ md, con TOC en `_index.md` para docs largos | Partir en secciones; umbral automático |
 | DD-12 | App OAuth | Client desktop de un proyecto GCP de Cristian, en el instalador | Proyecto GCP propio de Daiana |
 | DD-13 | Cadencias | Sync diario 07:00 + manual; digest lunes 08:00; configurables | — (cierra PA-02) |

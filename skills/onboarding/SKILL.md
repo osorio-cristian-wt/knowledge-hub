@@ -18,9 +18,29 @@ python `C:\clawhub\ecosystem\.venv\Scripts\python.exe` (cwd = ecosystem).
 1. **Verificar base**: `git --version`, `python --version` (el venv existe),
    OpenClaw corriendo. Si falta algo, volver a correr `install.ps1`.
 
-2. **Canal Telegram**: si este chat ya es Telegram, listo. Si no: guiarla con
-   BotFather paso a paso (crear bot, pegar el token acá) y configurar el canal
-   en OpenClaw.
+2. **Canales de chat** (mismo Gateway de OpenClaw):
+
+   a. **Telegram — principal** (DD-10): es el que da *push* del digest y las
+      alertas al celular. Si este chat ya es Telegram, listo. Si no: guiarla con
+      BotFather paso a paso (crear bot, pegar el token acá) y configurar el canal
+      en OpenClaw.
+
+   b. **WebChat — secundario, local**: es la Control UI del propio Gateway (no un
+      canal `channels.*`; se sirve solo con el Gateway corriendo). Para que
+      Daiana pueda escribirle desde el navegador de la PC:
+      - Mantener loopback: `gateway.bind = 127.0.0.1`, `gateway.port = 18789`
+        (defaults). NUNCA exponer a la LAN / `0.0.0.0` (RNF-01).
+      - Ponerle una contraseña simple (es no técnica): `openclaw config set
+        gateway.auth.mode password` y `openclaw config set gateway.auth.password
+        "<la que ella elija>"`. Verificar el nombre exacto del modo con `openclaw
+        configure` / `openclaw config get gateway.auth` según la versión (ver
+        nota de install.ps1).
+      - `openclaw doctor --fix` para limpiar config legacy (`channels.webchat` /
+        `gateway.webchat` están retirados).
+      - Probar en vivo: abrir `http://127.0.0.1:18789/`, entrar con la contraseña
+        y mandar un mensaje de prueba.
+      La contraseña queda en `%USERPROFILE%\.openclaw\openclaw.json`, fuera de
+      ambos repos como el resto de secretos (DD-15).
 
 3. **API key de Anthropic (RF-04)**: la cuenta es de Daiana (costos suyos).
    Guiarla: console.anthropic.com → crear cuenta → API keys → crear → pegar acá.
@@ -62,4 +82,6 @@ python `C:\clawhub\ecosystem\.venv\Scripts\python.exe` (cwd = ecosystem).
 
 10. **Cierre**: explicarle en 5 líneas qué puede pedir desde ya (preguntas,
     reportes, "actualizá la documentación", pegar links de Drive) y que cada
-    lunes le llega el resumen semanal.
+    lunes le llega el resumen semanal. Recordarle los dos lugares para
+    escribirle a Claw: **Telegram** (desde el celular, y por donde le llegan los
+    avisos) y el **navegador** en `http://127.0.0.1:18789/` cuando esté en la PC.

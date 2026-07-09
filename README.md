@@ -19,6 +19,10 @@ Deja OpenClaw corriendo. Todo lo demás (Telegram, API key, OAuth de Drive,
 selección curada, primer sync) lo guía Claw conversando — decirle al bot:
 **"arrancá el onboarding"**.
 
+Se le puede hablar a Claw por **Telegram** (principal, y por donde llegan los
+avisos) o por **WebChat** en el navegador de la PC (`http://127.0.0.1:18789/`,
+loopback con contraseña). Ambos corren sobre el mismo Gateway de OpenClaw.
+
 ## Layout del repo
 
 | Ruta | Qué es |
