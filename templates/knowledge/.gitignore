@@ -1,0 +1,10 @@
+# Credenciales jamás en este repo (RNF-01, DD-15) — viven en %LOCALAPPDATA%\clawhub
+*token*.json
+*credential*
+*.secret
+.env
+
+# Basura de Windows / Office
+Thumbs.db
+desktop.ini
+~$*

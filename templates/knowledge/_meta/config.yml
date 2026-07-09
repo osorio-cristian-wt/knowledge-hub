@@ -1,0 +1,46 @@
+# Configuración del sistema (la leen el pipeline y las skills).
+# Daiana no edita esto a mano: se ajusta conversando con Claw.
+
+sync:
+  cadencia: diaria
+  hora: "07:00"        # hora local de Daiana, antes de su jornada (DD-13)
+
+digest:
+  dia: lunes
+  hora: "08:00"
+
+# Etapa 1 de la clasificación de cambios (§6 del diseño, DD-09):
+#   critico  → siempre se analiza y se avisa
+#   rutinario→ directo al digest semanal, sin análisis por cambio
+#   normal   → lo juzga el agente mirando el diff
+importancia:
+  default: normal
+  por_tipo:
+    politica: critico
+    procedimiento: normal
+    reporte: normal
+    scorecard: normal
+  por_ruta:
+    "cleanora/ventas/*.data/*": rutinario   # números diarios de ventas
+    "_meta/inbox/*": normal
+
+# Chequeos pandas sobre los CSV tras cada sync (RF-33). Ejemplos:
+# alertas:
+#   - nombre: ventas-en-cero
+#     archivo: "cleanora/ventas/reporte-ventas.data/daily.csv"
+#     tipo: cero
+#     columna: total
+#   - nombre: caida-ventas
+#     archivo: "cleanora/ventas/reporte-ventas.data/daily.csv"
+#     tipo: caida
+#     columna: total
+#     umbral_pct: 30
+#     ventana: 7
+#   - nombre: leads-sin-datos
+#     archivo: "cleanora/ventas/reporte-ventas.data/daily.csv"
+#     tipo: faltantes
+#     columna: lead_source
+alertas: []
+
+# Recordatorios de reportes (RF-32): se dan de alta conversando con Claw.
+recordatorios: []
