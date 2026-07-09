@@ -44,32 +44,34 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     throw "winget no esta disponible. Actualizar 'Instalador de aplicacion' desde Microsoft Store y reintentar."
 }
 
-function Test-PythonReal {
+function Get-RealPythonVersion {
     # Windows agrega un acceso directo en WindowsApps (python.exe / python3.exe)
     # que aparece en Get-Command pero solo redirige a la Microsoft Store.
     # Si no se detecta esto, el script cree que Python esta instalado y
     # despues falla en silencio al crear el venv (paso 3/6).
+    # Devuelve el string "Python X.Y.Z" real, o $null si no hay uno usable.
     param([string]$Command)
-    if (-not (Get-Command $Command -ErrorAction SilentlyContinue)) { return $false }
+    if (-not (Get-Command $Command -ErrorAction SilentlyContinue)) { return $null }
     try {
-        $out = & $Command --version 2>&1
+        $out = [string](& $Command --version 2>&1)
     } catch {
-        return $false
+        return $null
     }
-    return [string]$out -match '^Python \d'
+    if ($out -match '^Python \d') { return $out.Trim() }
+    return $null
 }
 
 Write-Paso "1/6 Herramientas base"
 Ensure-Tool -Command git  -WingetId Git.Git           -Display "Git"
 Ensure-Tool -Command node -WingetId OpenJS.NodeJS.LTS -Display "Node.js LTS"
 
-if (Test-PythonReal python) {
-    Write-Host "Python 3.12 ya instalado."
-} else {
+$pyVersion = Get-RealPythonVersion python
+if (-not $pyVersion) {
     Write-Host "Instalando Python 3.12..."
     winget install --id Python.Python.3.12 -e --silent --accept-source-agreements --accept-package-agreements
     Refresh-Path
-    if (-not (Test-PythonReal python)) {
+    $pyVersion = Get-RealPythonVersion python
+    if (-not $pyVersion) {
         throw @"
 Python quedo instalado pero 'python' en PATH sigue apuntando al acceso
 directo de la Microsoft Store (comun en Windows 10). Para arreglarlo:
@@ -81,6 +83,10 @@ directo de la Microsoft Store (comun en Windows 10). Para arreglarlo:
      correr este script.
 "@
     }
+}
+Write-Host "$pyVersion detectado en PATH."
+if ($pyVersion -notmatch '^Python 3\.12\.') {
+    Write-Host "AVISO: el pipeline se probo con Python 3.12.x y en PATH hay $pyVersion. Si otro Python (de una instalacion previa) esta antes en el PATH, puede causar errores raros de dependencias en el paso 3/6." -ForegroundColor Yellow
 }
 
 Write-Paso "2/6 Repo del ecosistema (canal de updates, RF-03)"
